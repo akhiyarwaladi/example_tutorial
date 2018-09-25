@@ -10,7 +10,7 @@ import numpy as np
 #  allow your sparse autoencoder to get good filters; you do not need to
 #  change the parameters below.
 
-input_size = 28 * 28
+input_size = 8
 num_classes = 10
 hidden_size_L1 = 200  # Layer 1 Hidden Size
 hidden_size_L2 = 200  # Layer 2 Hidden Size
@@ -23,9 +23,32 @@ beta = 3  # weight of sparsity penalty term
 #
 #  This loads our training data from the MNIST database files.
 
-train_images = load_MNIST.load_MNIST_images('data/mnist/train-images-idx3-ubyte')
-train_labels = load_MNIST.load_MNIST_labels('data/mnist/train-labels-idx1-ubyte')
+# train_images = load_MNIST.load_MNIST_images('data/mnist/train-images-idx3-ubyte')
+# train_labels = load_MNIST.load_MNIST_labels('data/mnist/train-labels-idx1-ubyte')
 
+# test_images = load_MNIST.load_MNIST_images('data/mnist/t10k-images.idx3-ubyte')
+# test_labels = load_MNIST.load_MNIST_labels('data/mnist/t10k-labels.idx1-ubyte')
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+dat = pd.read_csv("diabetes.csv")
+X = dat.drop("Outcome", 1)
+y = dat["Outcome"]
+
+print(X.shape)
+print(y.shape)
+train_images, test_images, train_labels, test_labels = train_test_split(X.values, y.values, test_size=0.33, random_state=42)
+# from keras.datasets import mnist
+# (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+
+train_images = train_images.reshape(train_images.shape[0], input_size).transpose().astype('float64')
+test_images = test_images.reshape(test_images.shape[0], input_size).transpose().astype('float64')
+train_labels = train_labels.astype('float64')
+test_labels = test_labels.astype('float64')
+# print(train_images.shape)
+# print(test_images.shape)
+# print(train_labels.shape)
+# print(test_labels.shape)
 
 ##======================================================================
 ## STEP 2: Train the first sparse autoencoder
@@ -40,12 +63,12 @@ sae1_theta = sparse_autoencoder.initialize(hidden_size_L1, input_size)
 J = lambda x: sparse_autoencoder.sparse_autoencoder_cost(x, input_size, hidden_size_L1,
                                                          lambda_, sparsity_param,
                                                          beta, train_images)
-options_ = {'maxiter': 400, 'disp': True}
+options_ = {'maxiter': 20, 'disp': True}
 
 result = scipy.optimize.minimize(J, sae1_theta, method='L-BFGS-B', jac=True, options=options_)
 sae1_opt_theta = result.x
 
-print result
+print (result)
 
 ##======================================================================
 ## STEP 3: Train the second sparse autoencoder
@@ -64,12 +87,12 @@ J = lambda x: sparse_autoencoder.sparse_autoencoder_cost(x, hidden_size_L1, hidd
                                                          lambda_, sparsity_param,
                                                          beta, sae1_features)
 
-options_ = {'maxiter': 400, 'disp': True}
+options_ = {'maxiter': 20, 'disp': True}
 
 result = scipy.optimize.minimize(J, sae2_theta, method='L-BFGS-B', jac=True, options=options_)
 sae2_opt_theta = result.x
 
-print result
+print (result)
 
 
 ##======================================================================
@@ -81,7 +104,7 @@ print result
 sae2_features = sparse_autoencoder.sparse_autoencoder(sae2_opt_theta, hidden_size_L2,
                                                       hidden_size_L1, sae1_features)
 
-options_ = {'maxiter': 400, 'disp': True}
+options_ = {'maxiter': 20, 'disp': True}
 
 softmax_theta, softmax_input_size, softmax_num_classes = softmax.softmax_train(hidden_size_L2, num_classes,
                                                                                lambda_, sae2_features,
@@ -110,29 +133,29 @@ J = lambda x: stacked_autoencoder.stacked_autoencoder_cost(x, input_size, hidden
                                                            num_classes, net_config, lambda_,
                                                            train_images, train_labels)
 
-options_ = {'maxiter': 400, 'disp': True}
+options_ = {'maxiter': 20, 'disp': True}
 result = scipy.optimize.minimize(J, stacked_autoencoder_theta, method='L-BFGS-B', jac=True, options=options_)
 stacked_autoencoder_opt_theta = result.x
 
-print result
+print (result)
 
 ##======================================================================
 ## STEP 6: Test
 
-test_images = load_MNIST.load_MNIST_images('data/mnist/t10k-images.idx3-ubyte')
-test_labels = load_MNIST.load_MNIST_labels('data/mnist/t10k-labels.idx1-ubyte')
+# test_images = load_MNIST.load_MNIST_images('data/mnist/t10k-images.idx3-ubyte')
+# test_labels = load_MNIST.load_MNIST_labels('data/mnist/t10k-labels.idx1-ubyte')
 
 
 # Two auto encoders without fine tuning
 pred = stacked_autoencoder.stacked_autoencoder_predict(stacked_autoencoder_theta, input_size, hidden_size_L2,
                                                        num_classes, net_config, test_images)
 
-print "Before fine-tuning accuracy: {0:.2f}%".format(100 * np.sum(pred == test_labels, dtype=np.float64) /
-                                                     test_labels.shape[0])
+print ("Before fine-tuning accuracy: {0:.2f}%".format(100 * np.sum(pred == test_labels, dtype=np.float64) /
+                                                     test_labels.shape[0]))
 
 # Two auto encoders with fine tuning
 pred = stacked_autoencoder.stacked_autoencoder_predict(stacked_autoencoder_opt_theta, input_size, hidden_size_L2,
                                                        num_classes, net_config, test_images)
 
-print "After fine-tuning accuracy: {0:.2f}%".format(100 * np.sum(pred == test_labels, dtype=np.float64) /
-                                                    test_labels.shape[0])
+print ("After fine-tuning accuracy: {0:.2f}%".format(100 * np.sum(pred == test_labels, dtype=np.float64) /
+                                                    test_labels.shape[0]))

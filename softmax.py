@@ -69,7 +69,7 @@ def softmax_train(input_size, num_classes, lambda_, data, labels, options={'maxi
 
     result = scipy.optimize.minimize(J, theta, method='L-BFGS-B', jac=True, options=options)
 
-    print result
+    print (result)
     # Return optimum theta, input size & num classes
     opt_theta = result.x
 
